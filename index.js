@@ -5,71 +5,103 @@ const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const { forEach } = require("lodash");
 const _ = require("lodash");
-const PORT = process.env.PORT || 3030;
+const port = 4000;
 
-
-const homeStartingContent = "Lacus vel facilisis volutpat est velit egestas dui id ornare. Semper auctor neque vitae tempus quam. Sit amet cursus sit amet dictum sit amet justo. Viverra tellus in hac habitasse. Imperdiet proin fermentum leo vel orci porta. Donec ultrices tincidunt arcu non sodales neque sodales ut. Mattis molestie a iaculis at erat pellentesque adipiscing. Magnis dis parturient montes nascetur ridiculus mus mauris vitae ultricies. Adipiscing elit ut aliquam purus sit amet luctus venenatis lectus. Ultrices vitae auctor eu augue ut lectus arcu bibendum at. Odio euismod lacinia at quis risus sed vulputate odio ut. Cursus mattis molestie a iaculis at erat pellentesque adipiscing.";
-const aboutContent = "Hac habitasse platea dictumst vestibulum rhoncus est pellentesque. Dictumst vestibulum rhoncus est pellentesque elit ullamcorper. Non diam phasellus vestibulum lorem sed. Platea dictumst quisque sagittis purus sit. Egestas sed sed risus pretium quam vulputate dignissim suspendisse. Mauris in aliquam sem fringilla. Semper risus in hendrerit gravida rutrum quisque non tellus orci. Amet massa vitae tortor condimentum lacinia quis vel eros. Enim ut tellus elementum sagittis vitae. Mauris ultrices eros in cursus turpis massa tincidunt dui.";
-const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rhoncus urna neque viverra justo nec ultrices. Arcu dui vivamus arcu felis bibendum. Consectetur adipiscing elit duis tristique. Risus viverra adipiscing at in tellus integer feugiat. Sapien nec sagittis aliquam malesuada bibendum arcu vitae. Consequat interdum varius sit amet mattis. Iaculis nunc sed augue lacus. Interdum posuere lorem ipsum dolor sit amet consectetur adipiscing elit. Pulvinar elementum integer enim neque. Ultrices gravida dictum fusce ut placerat orci nulla. Mauris in aliquam sem fringilla ut morbi tincidunt. Tortor posuere ac ut consequat semper viverra nam libero.";
 
 const app = express();
+app.use('/public/css', express.static('public'));
+app.use('/public/styles',express.static('public'));
 
-app.set('view engine', 'ejs');
 
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(express.static("public"));
+// In-memory data store
+let posts = [
+  {
+    id: 1,
+    title: "The Rise of Decentralized Finance",
+    content:
+      "Decentralized Finance (DeFi) is an emerging and rapidly evolving field in the blockchain industry. It refers to the shift from traditional, centralized financial systems to peer-to-peer finance enabled by decentralized technologies built on Ethereum and other blockchains. With the promise of reduced dependency on the traditional banking sector, DeFi platforms offer a wide range of services, from lending and borrowing to insurance and trading.",
+    author: "Alex Thompson",
+    date: "2023-08-01T10:00:00Z",
+  },
+  {
+    id: 2,
+    title: "The Impact of Artificial Intelligence on Modern Businesses",
+    content:
+      "Artificial Intelligence (AI) is no longer a concept of the future. It's very much a part of our present, reshaping industries and enhancing the capabilities of existing systems. From automating routine tasks to offering intelligent insights, AI is proving to be a boon for businesses. With advancements in machine learning and deep learning, businesses can now address previously insurmountable problems and tap into new opportunities.",
+    author: "Mia Williams",
+    date: "2023-08-05T14:30:00Z",
+  },
+  {
+    id: 3,
+    title: "Sustainable Living: Tips for an Eco-Friendly Lifestyle",
+    content:
+      "Sustainability is more than just a buzzword; it's a way of life. As the effects of climate change become more pronounced, there's a growing realization about the need to live sustainably. From reducing waste and conserving energy to supporting eco-friendly products, there are numerous ways we can make our daily lives more environmentally friendly. This post will explore practical tips and habits that can make a significant difference.",
+    author: "Samuel Green",
+    date: "2023-08-10T09:15:00Z",
+  },
+];
 
-let posts = [];
+let lastId = 3;
 
-app.get("/" ,function (req,res) {
-  res.render("home",{
-    StartingContent: homeStartingContent,
-    posts:posts,
-   });
+// Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-} );
-app.get("/about", function(req,res){
-  res.render("about",{contenta:aboutContent});
+app.get("/posts" , (req,res) => {
+
+  res.json(posts);
 });
-app.get("/contact", function(req,res){
-  res.render("contact",{contentc:contactContent});
+
+app.get("/posts/:id", (req, res) => {
+  const post = posts.find((p) => p.id === parseInt(req.params.id));
+  if (!post) return res.status(404).json({ message: "Post not found" });
+  res.json(post);
 });
 
-app.get("/compose", function(req,res){
-  res.render("compose");
-});
-app.post("/compose", function(req,res) {
+app.post("/posts", (req, res) => {
+  const newId = lastId += 1;
   const post = {
-    title : req.body.postContent,
-    content : req.body. postBody
+    id: newId,
+    title: req.body.title,
+    content: req.body.content,
+    author: req.body.author,
+    date: new Date(),
   };
-posts.push(post);
-res.redirect("/");
-});
-
-app.get("/posts/:postName", function(req,res){
-  const requestedTitle = _.lowerCase(req.params.postName);
-
- posts.forEach(function(post){
-  const storedTitle = _.lowerCase(post.title);
-  if(storedTitle===requestedTitle) {
-   res.render("post",{
-    title : post.title,
-    content : post.content
-   });
-  };
-
- });
+  lastId = newId;
+  posts.push(post);
+  res.status(201).json(post);
 });
 
 
-
-
-
-
-
-
-
-app.listen(PORT, () => {
-  console.log(`server started on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`API is running at http://localhost:${port}`);
 });
+
+
+app.patch("/posts/:id", (req, res) => {
+  const post = posts.find((p) => p.id === parseInt(req.params.id));
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  if (req.body.title) post.title = req.body.title;
+  if (req.body.content) post.content = req.body.content;
+  if (req.body.author) post.author = req.body.author;
+
+  res.json(post);
+});
+
+app.delete("/posts/:id", (req, res) => {
+  const index = posts.findIndex((p) => p.id === parseInt(req.params.id));
+  if (index === -1) return res.status(404).json({ message: "Post not found" });
+
+  posts.splice(index, 1);
+  res.json({ message: "Post deleted" });
+});
+
+app.get("/about" , function(req,res)  {
+  res.render("about", {content : contenta})
+});
+
+
+
+
+
